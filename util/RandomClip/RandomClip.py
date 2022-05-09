@@ -43,20 +43,20 @@ class Params (object):
     convert to json  
     """
     def toJson(self):
-        data = dict()
-        data['gdsFile'] = self.gdsFile
-        data['gdsDatabaseUnit'] = self.gdsDatabaseUnit
-        data['ssFile'] = self.ssFile
-        data['layer'] = self.layer
-        data['cell'] = self.cell
-        data['sizeArray'] = self.sizeArray
-        data['pitchArray'] = self.pitchArray
-        data['regionWidth'] = self.regionWidth
-        data['regionHeight'] = self.regionHeight
-        data['randomVariation'] = self.randomVariation
-        data['randomSeed'] = self.randomSeed
-        data['numClips'] = self.numClips
-        return data 
+        return {
+            'gdsFile': self.gdsFile,
+            'gdsDatabaseUnit': self.gdsDatabaseUnit,
+            'ssFile': self.ssFile,
+            'layer': self.layer,
+            'cell': self.cell,
+            'sizeArray': self.sizeArray,
+            'pitchArray': self.pitchArray,
+            'regionWidth': self.regionWidth,
+            'regionHeight': self.regionHeight,
+            'randomVariation': self.randomVariation,
+            'randomSeed': self.randomSeed,
+            'numClips': self.numClips,
+        } 
     """
     load form json 
     """
@@ -151,8 +151,8 @@ class RandomClip (object):
         self.next(newRowFlag=True)
         print("after random noise array patterns: numClips = ", len(self.clipArray))
 
-        os.system("mkdir -p %s" % (os.path.dirname(self.params.gdsFile)))
-        os.system("mkdir -p %s" % (os.path.dirname(self.params.npFile)))
+        os.system(f"mkdir -p {os.path.dirname(self.params.gdsFile)}")
+        os.system(f"mkdir -p {os.path.dirname(self.params.npFile)}")
 
         # write clip property file for the positions of each clip 
         content = "clipId\tcenterX\tcenterY\twidth\theight\tlayer\ttype\tcenterContactWidth\tcenterContactHeight\n"
@@ -238,10 +238,7 @@ class RandomClip (object):
     return spreadsheet file name (ssFile)
     """
     def clipSpreadsheetFile(self): 
-        if self.params.ssFile: 
-            return self.params.ssFile 
-        else: 
-            return str(self.params.gdsFile).replace(".gds", ".ss")
+        return self.params.ssFile or str(self.params.gdsFile).replace(".gds", ".ss")
     """
     return clip gds file name
     """
@@ -258,7 +255,7 @@ class RandomClip (object):
             # maximum number of grids
             numGrids = (int((self.params.regionWidth-size[0])/pitch[0]), int((self.params.regionHeight-size[1])/pitch[1]))
             print("numGrids = ", numGrids)
-            # enumerate all combination of grids 
+            # enumerate all combination of grids
             for numGridX in range(1, numGrids[0]): 
                 stepX = numGridX*pitch[0]
                 rangeX = (-int((self.params.regionWidth-size[0])/2/stepX), int((self.params.regionWidth-size[0])/2/stepX)+1)
@@ -285,15 +282,15 @@ class RandomClip (object):
                     # add contacts to GDSII 
                     self.clipArray.append((self.region, contactArray, centerContact))
                     self.numArrayClips += 1
-                    # clip region 
-                    self.next(newRowFlag=True if rangeY[1]-rangeY[0] == 1 and rangeX[1]-rangeX[0] == 1 else False)
+                    # clip region
+                    self.next(newRowFlag=rangeY[1]-rangeY[0] == 1 and rangeX[1]-rangeX[0] == 1)
 
                     # avoid repeating the same patterns with single row or column 
                     if (rangeY[1]-rangeY[0] == 1 or len(self.clipArray) >= numClips): 
-                        break 
+                        break
                 # avoid repeating the same patterns with single row or column 
                 if (rangeX[1]-rangeX[0] == 1 or len(self.clipArray) >= numClips): 
-                    break 
+                    break
         self.next(newRowFlag=True)
     """
     generate random arrays with some contacts omitted from arrays 
@@ -307,7 +304,7 @@ class RandomClip (object):
             # maximum number of grids
             numGrids = (int((self.params.regionWidth-size[0])/pitch[0]), int((self.params.regionHeight-size[1])/pitch[1]))
             print("numGrids = ", numGrids)
-            # enumerate all combination of grids 
+            # enumerate all combination of grids
             for numGridX in range(1, numGrids[0]): 
                 stepX = numGridX*pitch[0]
                 rangeX = (-int((self.params.regionWidth-size[0])/2/stepX), int((self.params.regionWidth-size[0])/2/stepX)+1)
@@ -315,7 +312,7 @@ class RandomClip (object):
                     stepY = numGridY*pitch[1]
                     rangeY = (-int((self.params.regionHeight-size[1])/2/stepY), int((self.params.regionHeight-size[1])/2/stepY)+1)
                     #print "step = ", (numGridX, numGridY)
-                    for k in range(numRandomCopies): # random copies from one array clip 
+                    for _ in range(numRandomCopies):
                         contactArray = []
                         cx = (self.region[0]+self.region[2])/2 # center of clip 
                         cy = (self.region[1]+self.region[3])/2 # center of clip 
@@ -336,27 +333,27 @@ class RandomClip (object):
                         # omit some contacts 
                         # number of remained contacts 
                         if len(contactArray) < 5: # skip few patterns
-                            continue 
+                            continue
                         # random sampling with random size 
                         numRemain = np.random.randint(max(int(0.4*len(contactArray)), 1), int(math.floor(0.9*len(contactArray))))
                         sampleIndexArray = np.random.choice(np.arange(len(contactArray)), size=numRemain, replace=False)
                         randomContactArray = [contactArray[i] for i in sampleIndexArray]
                         # add center contact 
-                        randomContactArray.append(centerContact) 
+                        randomContactArray.append(centerContact)
                         # add contacts to GDSII 
                         self.clipArray.append((self.region, randomContactArray, centerContact))
                         self.numRandomArrayClips += 1
-                        # clip region 
-                        self.next(newRowFlag=True if rangeY[1]-rangeY[0] == 1 and rangeX[1]-rangeX[0] == 1 else False)
+                        # clip region
+                        self.next(newRowFlag=rangeY[1]-rangeY[0] == 1 and rangeX[1]-rangeX[0] == 1)
 
                         if (len(self.clipArray) >= numClips): 
-                            break 
+                            break
                     # avoid repeating the same patterns with single row or column 
                     if (rangeY[1]-rangeY[0] == 1 or len(self.clipArray) >= numClips): 
-                        break 
+                        break
                 # avoid repeating the same patterns with single row or column 
                 if (rangeX[1]-rangeX[0] == 1 or len(self.clipArray) >= numClips): 
-                    break 
+                    break
         self.next(newRowFlag=True)
     """
     generate arrays with random noise 
@@ -366,11 +363,11 @@ class RandomClip (object):
         print("numRandomCopies = ", numRandomCopies)
         for size, pitch in zip(self.params.sizeArray, self.params.pitchArray): 
             print("size = ", size)
-            print("pitch = ", pitch) 
+            print("pitch = ", pitch)
             # maximum number of grids
             numGrids = (int((self.params.regionWidth-size[0])/pitch[0]), int((self.params.regionHeight-size[1])/pitch[1]))
             print("numGrids = ", numGrids)
-            # enumerate all combination of grids 
+            # enumerate all combination of grids
             for numGridX in range(1, numGrids[0]): 
                 stepX = numGridX*pitch[0]
                 rangeX = (-int((self.params.regionWidth-size[0])/2/stepX), int((self.params.regionWidth-size[0])/2/stepX)+1)
@@ -378,7 +375,7 @@ class RandomClip (object):
                     stepY = numGridY*pitch[1]
                     rangeY = (-int((self.params.regionHeight-size[1])/2/stepY), int((self.params.regionHeight-size[1])/2/stepY)+1)
                     #print "step = ", (numGridX, numGridY)
-                    for k in range(numRandomCopies): # random copies from one array clip 
+                    for _ in range(numRandomCopies):
                         contactArray = []
                         cx = (self.region[0]+self.region[2])/2 # center of clip 
                         cy = (self.region[1]+self.region[3])/2 # center of clip 
@@ -406,25 +403,32 @@ class RandomClip (object):
                                     validArray[i] = False
                                 else: 
                                     for j in range(len(randomContactArray)): 
-                                        if i != j and validArray[j]: 
-                                            if self.distance(randomContactArray[i], randomContactArray[j]) < min(pitch[0], pitch[1])/2: # two contacts have overlap 
-                                                validArray[j] = False 
+                                        if (
+                                            i != j
+                                            and validArray[j]
+                                            and self.distance(
+                                                randomContactArray[i],
+                                                randomContactArray[j],
+                                            )
+                                            < min(pitch[0], pitch[1]) / 2
+                                        ):
+                                            validArray[j] = False
                         selectContactArray = [randomContactArray[i] for i in range(len(randomContactArray)) if validArray[i]]
                         if not selectContactArray: 
-                            continue 
+                            continue
                         # add center contact 
-                        selectContactArray.append(centerContact) 
+                        selectContactArray.append(centerContact)
                         # add contacts to GDSII 
                         self.clipArray.append((self.region, selectContactArray, centerContact))
                         self.numRandomNoiseArrayClips += 1
-                        # clip region 
-                        self.next(newRowFlag=True if rangeY[1]-rangeY[0] == 1 and rangeX[1]-rangeX[0] == 1 else False)
+                        # clip region
+                        self.next(newRowFlag=rangeY[1]-rangeY[0] == 1 and rangeX[1]-rangeX[0] == 1)
 
                         if (len(self.clipArray) >= numClips): 
-                            break 
+                            break
                     # avoid repeating the same patterns with single row or column 
                     if (rangeY[1]-rangeY[0] == 1 or len(self.clipArray) >= numClips): 
-                        break 
+                        break
                 # avoid repeating the same patterns with single row or column 
                 if (rangeX[1]-rangeX[0] == 1 or len(self.clipArray) >= numClips): 
                     break 

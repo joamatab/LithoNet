@@ -17,14 +17,17 @@ class Visualizer():
         """
         self.opt = opt  # cache the option
         self.name = opt.name
-        
+
         if opt.isTrain:
             self.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')
             with open(self.log_name, "a") as log_file:
                 now = time.strftime("%c")
                 log_file.write('================ Training Loss (%s) ================\n' % now)
         else: # save testing results
-            os.system("mkdir -p %s" % os.path.join(opt.checkpoints_dir, opt.name, "test_results"))
+            os.system(
+                f'mkdir -p {os.path.join(opt.checkpoints_dir, opt.name, "test_results")}'
+            )
+
             self.test_log_name = os.path.join(opt.checkpoints_dir, opt.name, 'test_results', 'test_log.txt')
             with open(self.test_log_name, 'a') as log_file:
                 now = time.strftime("%c")

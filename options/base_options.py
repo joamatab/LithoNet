@@ -80,8 +80,7 @@ class BaseOptions():
         It will print both current options and default values(if different).
         It will save options into a text file / [checkpoints_dir] / opt.txt
         """
-        message = ''
-        message += '----------------- Options ---------------\n'
+        message = '' + '----------------- Options ---------------\n'
         for k, v in sorted(vars(opt).items()):
             comment = ''
             default = self.parser.get_default(k)
@@ -95,7 +94,7 @@ class BaseOptions():
         expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
         util.mkdirs(expr_dir)
         phase = 'train' if opt.isTrain else 'test'
-        file_name = os.path.join(expr_dir, '{}_opt.txt'.format(phase))
+        file_name = os.path.join(expr_dir, f'{phase}_opt.txt')
         with open(file_name, 'wt') as opt_file:
             opt_file.write(message)
             opt_file.write('\n')

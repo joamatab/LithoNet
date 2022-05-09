@@ -28,12 +28,14 @@ class BaseDataset(data.Dataset):
 
 def npz_path(path):
     file = os.listdir(path)
-    assert len(file) == 1, "There should be one and only one .npz dataset file be put in %s" % path
+    assert (
+        len(file) == 1
+    ), f"There should be one and only one .npz dataset file be put in {path}"
+
     filename = file[0]
     _, type = os.path.splitext(filename)
     assert type == '.npz', "Dataset should be packed as .npz files"
-    res_path = os.path.join(path, filename)
-    return res_path
+    return os.path.join(path, filename)
 
 
 class LithoSimulDataset(BaseDataset):
@@ -48,8 +50,7 @@ class LithoSimulDataset(BaseDataset):
         aerial_image = np.load(self.aerial_image_root)["{:04}".format(index)]
         mask_tensor, aerial_image_tensor = self.preprocess(mask, aerial_image)
 
-        input_dict = {'mask':mask_tensor, 'aerial_image':aerial_image_tensor, 'index':index}
-        return input_dict
+        return {'mask':mask_tensor, 'aerial_image':aerial_image_tensor, 'index':index}
     
     def __len__(self):
         len1, len2 = len(np.load(self.mask_root)), len(np.load(self.aerial_image_root))
@@ -90,8 +91,7 @@ class PretrainDataset(BaseDataset):
         mask = np.array(mask, dtype=np.uint8)
 
         layout_tensor, mask_tensor = self.preprocess(layout, mask)
-        input_dict = {'layout':layout_tensor, 'mask':mask_tensor, 'index':index}
-        return input_dict
+        return {'layout':layout_tensor, 'mask':mask_tensor, 'index':index}
 
     def __len__(self):
         len1, len2 = len(np.load(self.layout_root)), len(np.load(self.mask_root))
@@ -137,8 +137,7 @@ class FinetuneDataset(BaseDataset):
         layout = np.array(layout, dtype=np.uint8)
         layout_tensor = self.preprocess(layout)
 
-        input_dict = {'layout':layout_tensor, 'index':index}
-        return input_dict
+        return {'layout':layout_tensor, 'index':index}
     
     def __len__(self):
         return len(np.load(self.layout_root))
@@ -150,18 +149,16 @@ class FinetuneDataset(BaseDataset):
         self.pad_width = (load_size - orig_size) // 2
         layout = np.pad(layout, self.pad_width, 'constant')
 
-        if self.opt.isTrain:
-            # only do data-augmentation when training
+        if self.opt.isTrain and random.random() > 0.5:
             if random.random() > 0.5:
-                if random.random() > 0.5:
-                    # Up-down flip
-                    layout = np.flip(layout, axis=0).copy()
-                else:
-                    # Left-right flip
-                    layout = np.flip(layout, axis=1).copy()
-        
+                # Up-down flip
+                layout = np.flip(layout, axis=0).copy()
+            else:
+                # Left-right flip
+                layout = np.flip(layout, axis=1).copy()
+
         # Pixel values range in [-1, 1]
         transform = transforms.Compose([transforms.ToTensor(),
                                         transforms.Normalize((0.5,), (0.5,))])
-        
+
         return transform(layout)

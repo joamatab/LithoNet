@@ -32,10 +32,15 @@ class BaseModel(ABC):
         self.opt = opt
         self.gpu_ids = opt.gpu_ids
         self.isTrain = opt.isTrain
-        self.device = torch.device('cuda:{}'.format(self.gpu_ids[0])) if self.gpu_ids else torch.device('cpu')  # get device name: CPU or GPU
+        self.device = (
+            torch.device(f'cuda:{self.gpu_ids[0]}')
+            if self.gpu_ids
+            else torch.device('cpu')
+        )
+
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)  # save all the checkpoints to save_dir
         torch.backends.cudnn.benchmark = True
-        
+
         self.loss_names = []
         self.model_names = []
         self.optimizers = []
@@ -91,7 +96,7 @@ class BaseModel(ABC):
         """Make models eval mode during test time"""
         for name in self.model_names:
             if isinstance(name, str):
-                net = getattr(self, 'net' + name)
+                net = getattr(self, f'net{name}')
                 net.eval()
 
     def test(self):
@@ -137,7 +142,7 @@ class BaseModel(ABC):
         errors_ret = OrderedDict()
         for name in self.loss_names:
             if isinstance(name, str):
-                errors_ret[name] = float(getattr(self, 'loss_' + name))  # float(...) works for both scalar tensor and float number
+                errors_ret[name] = float(getattr(self, f'loss_{name}'))
         return errors_ret
 
     def save_networks(self, epoch):
@@ -148,9 +153,9 @@ class BaseModel(ABC):
         """
         for name in self.model_names:
             if isinstance(name, str):
-                save_filename = '%s_net_%s.pth' % (epoch, name)
+                save_filename = f'{epoch}_net_{name}.pth'
                 save_path = os.path.join(self.save_dir, save_filename)
-                net = getattr(self, 'net' + name)
+                net = getattr(self, f'net{name}')
 
                 if len(self.gpu_ids) > 0 and torch.cuda.is_available():
                     torch.save(net.module.cpu().state_dict(), save_path)
@@ -162,10 +167,12 @@ class BaseModel(ABC):
         """Fix InstanceNorm checkpoints incompatibility (prior to 0.4)"""
         key = keys[i]
         if i + 1 == len(keys):  # at the end, pointing to a parameter/buffer
-            if module.__class__.__name__.startswith('InstanceNorm') and \
-                    (key == 'running_mean' or key == 'running_var'):
-                if getattr(module, key) is None:
-                    state_dict.pop('.'.join(keys))
+            if (
+                module.__class__.__name__.startswith('InstanceNorm')
+                and key in ['running_mean', 'running_var']
+                and getattr(module, key) is None
+            ):
+                state_dict.pop('.'.join(keys))
             if module.__class__.__name__.startswith('InstanceNorm') and \
                (key == 'num_batches_tracked'):
                 state_dict.pop('.'.join(keys))
@@ -180,12 +187,12 @@ class BaseModel(ABC):
         """
         for name in self.model_names:
             if isinstance(name, str):
-                load_filename = '%s_net_%s.pth' % (epoch, name)
+                load_filename = f'{epoch}_net_{name}.pth'
                 load_path = os.path.join(self.save_dir, load_filename)
-                net = getattr(self, 'net' + name)
+                net = getattr(self, f'net{name}')
                 if isinstance(net, torch.nn.DataParallel):
                     net = net.module
-                print('loading the model from %s' % load_path)
+                print(f'loading the model from {load_path}')
                 # if you are using PyTorch newer than 0.4 (e.g., built from
                 # GitHub source), you can remove str() on self.device
                 state_dict = torch.load(load_path, map_location=str(self.device))
@@ -201,12 +208,12 @@ class BaseModel(ABC):
         net = getattr(self, net_name)
         if isinstance(net, torch.nn.DataParallel):
             net = net.module
-        print('loading pretrained model from %s' % load_path)
+        print(f'loading pretrained model from {load_path}')
         state_dict = torch.load(load_path, map_location=self.device)
         if hasattr(state_dict, '_metadata'):
             del state_dict._metadata
         for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
-            self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))       
+            self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
         net.load_state_dict(state_dict)
 
     def print_networks(self, verbose):
@@ -218,10 +225,8 @@ class BaseModel(ABC):
         print('---------- Networks initialized -------------')
         for name in self.model_names:
             if isinstance(name, str):
-                net = getattr(self, 'net' + name)
-                num_params = 0
-                for param in net.parameters():
-                    num_params += param.numel()
+                net = getattr(self, f'net{name}')
+                num_params = sum(param.numel() for param in net.parameters())
                 if verbose:
                     print(net)
                 print('[Network %s] Total number of parameters : %.3f M' % (name, num_params / 1e6))

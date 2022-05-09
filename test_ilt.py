@@ -102,7 +102,7 @@ if __name__ == '__main__':
     opt.num_threads = 0   # test code only supports num_threads = 0
     opt.batch_size = 1    # test code only supports batch_size = 1
     opt.serial_batches = True  # disable data shuffling; comment this line if results on randomly chosen images are needed.
-    if opt.load_size == None:  opt.load_size = 256
+    if opt.load_size is None:  opt.load_size = 256
 
     dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
     model = create_model(opt)      # create a model given opt.model and other options
@@ -140,13 +140,11 @@ if __name__ == '__main__':
         ls_squared_l2.append(squared_l2)
         # Compute EPEs
         epes, epe_fail = compute_epe(real_sliced_layout, fake_aerial_image, model.aerial_thresh)
-        for k in epes:
-            if k < 20: epe_total.append(k)
-
+        epe_total.extend(k for k in epes if k < 20)
         visualizer.print_test_results(index, squared_l2, epes, epe_fail)
         # Plot results images and save them to the disk
         if opt.plot:
-            os.system("mkdir -p %s" % (results_path + '/test_images/'))
+            os.system(f"mkdir -p {results_path}/test_images/")
             image_path = os.path.join(results_path, 'test_images', '%04d.jpg' % i)
             print("########## Plotting (%04d)-th image ###########" % i)
             plot(real_sliced_layout, fake_mask, fake_aerial_image, fake_sliced_layout, path=image_path)
