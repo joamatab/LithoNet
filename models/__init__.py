@@ -21,13 +21,13 @@ def create_model(opt):
         >>> from models import create_model
         >>> model = create_model(opt)
     """
-    if opt.phase == 'pretrain':
-        model = PretrainModel
-    elif opt.phase == 'finetune':
+    if opt.phase == 'finetune':
         model = FinetuneModel
+    elif opt.phase == 'pretrain':
+        model = PretrainModel
     else:
         model = LithoSimulModel
-        
+
     instance = model(opt)
-    print("model [%s] was created" % type(instance).__name__)
+    print(f"model [{type(instance).__name__}] was created")
     return instance

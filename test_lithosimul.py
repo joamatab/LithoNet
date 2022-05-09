@@ -44,7 +44,7 @@ if __name__ == '__main__':
     opt.num_threads = 0   # test code only supports num_threads = 0
     opt.batch_size = 1    # test code only supports batch_size = 1
     opt.serial_batches = True  # disable data shuffling; comment this line if results on randomly chosen images are needed.
-    if opt.load_size == None:  opt.load_size = 256
+    if opt.load_size is None:  opt.load_size = 256
 
     dataset = create_dataset(opt)  # create a dataset given opt.dataset_mode and other options
     model = create_model(opt)      # create a model given opt.model and other options
@@ -72,15 +72,15 @@ if __name__ == '__main__':
         _rmse, _nrmse = compute_metrics(fake_aerial_image.cuda(), real_aerial_image.cuda())
         rmse.append(_rmse)
         nrmse.append(_nrmse)
-     
+
         print('processing (%04d)-th image...' % i)
         print('RMSE(xE-4):', 10000*_rmse, '  NRMSE(%):', 100*_nrmse)
 
         if opt.plot:
             image_path = (os.path.join(opt.checkpoints_dir, opt.name, 'test_results', 'test_images'))
-            os.system("mkdir -p %s" % image_path)
+            os.system(f"mkdir -p {image_path}")
             print("########## Plotting (%04d)-th image ###########" % i)
             plot(mask.cpu().numpy(), real_aerial_image.cpu().numpy(), fake_aerial_image.cpu().numpy(), path=image_path+"/{:04}.jpg".format(i))
             print("########## Finish plotting ###########")
-      
+
     visualizer.print_rmse_metrics(rmse, nrmse)

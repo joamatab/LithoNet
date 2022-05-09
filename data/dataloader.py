@@ -3,8 +3,7 @@ from data.dataset import FinetuneDataset, PretrainDataset, LithoSimulDataset
 
 def create_dataset(opt):
     data_loader = CustomDatasetDataLoader(opt)
-    dataset = data_loader.load_data()
-    return dataset
+    return data_loader.load_data()
 
 class CustomDatasetDataLoader():
 
@@ -18,8 +17,8 @@ class CustomDatasetDataLoader():
             self.dataset = FinetuneDataset(opt)
         else:
             raise Exception("Arg 'phase' should be [litho_simul | pretrain | finetune]")
-            
-        print("dataset [%s] was created"% self.dataset.name())
+
+        print(f"dataset [{self.dataset.name()}] was created")
         self.dataloader = torch.utils.data.DataLoader(
             self.dataset,
             batch_size = opt.batch_size,
